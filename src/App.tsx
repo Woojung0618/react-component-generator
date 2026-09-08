@@ -3,6 +3,7 @@ import { PromptInput } from './components/PromptInput';
 import { ComponentCard } from './components/ComponentCard';
 import { useComponentGenerator } from './hooks/useComponentGenerator';
 import type { Provider } from './types';
+import { loadProvider, saveProvider, loadApiKeys, saveApiKey } from './utils/storage';
 import './App.css';
 
 const PROVIDER_CONFIG = {
@@ -11,13 +12,14 @@ const PROVIDER_CONFIG = {
 } as const;
 
 function App() {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKeys, setApiKeys] = useState<Partial<Record<Provider, string>>>(() => loadApiKeys());
   const [showKey, setShowKey] = useState(false);
-  const [provider, setProvider] = useState<Provider>('google');
+  const [provider, setProvider] = useState<Provider>(() => loadProvider() ?? 'google');
   const [envKeys, setEnvKeys] = useState<Record<Provider, boolean>>({
     anthropic: false,
     google: false,
   });
+  const apiKey = apiKeys[provider] ?? '';
   const { components, isLoading, error, generate, removeComponent, clearAll } =
     useComponentGenerator();
 
@@ -40,7 +42,12 @@ function App() {
 
   const handleProviderChange = (newProvider: Provider) => {
     setProvider(newProvider);
-    setApiKey('');
+    saveProvider(newProvider);
+  };
+
+  const handleApiKeyChange = (value: string) => {
+    setApiKeys((prev) => ({ ...prev, [provider]: value }));
+    saveApiKey(provider, value);
   };
 
   const activeProvider = PROVIDER_CONFIG[provider].label;
@@ -99,7 +106,7 @@ function App() {
                 id="api-key"
                 type={showKey ? 'text' : 'password'}
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={(e) => handleApiKeyChange(e.target.value)}
                 placeholder={
                   hasEnvKey
                     ? '서버 키 사용 중 (직접 입력으로 덮어쓰기 가능)'
